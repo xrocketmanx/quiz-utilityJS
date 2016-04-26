@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Quiz example</title>
+	<link rel="stylesheet" type="text/css" href="example.css">
+	<script src="js/timer.js"></script>
+	<script src="js/quiz-navigation.js"></script>
+	<script src="js/quiz-dom-loader.js"></script>
+	<script src="js/quiz.js"></script>
+</head>
+<body>
+	<div class="qu-ex">
+		<div class="qu-main-ex">
+			<p class="qu-question">Question</p>
+			<input type="radio" name="answer">answer1</input>
+			<input type="radio" name="answer">answer2</input>
+		</div>
+
+	</div>
+	<div class="qu-form">
+	</div>
+	<script type="text/javascript">
+		var quiz = new Quiz([1, 2, 3]);
+		quiz.loadQuiz();
+	</script>
+</body>
+</html>
