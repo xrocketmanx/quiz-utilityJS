@@ -19,7 +19,14 @@
 			options: ['Rammstein', 'Linkin Park', 'Deep purple', 'Something else'],
 			type: 'single'
 		};
-		var quiz = new Quiz([question1, question2]);
+		var question3 = {
+			text: 'enter your favourite dota hero',
+			type: 'field'
+		}
+		var quiz = new Quiz([question1, question2, question3], 5, function(questions) {
+			console.log(questions);
+			document.querySelector('.qu-form').innerHTML = '';
+		});
 		quiz.loadQuiz();
 		quiz.startQuiz();
 	</script>

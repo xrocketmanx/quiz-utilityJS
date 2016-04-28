@@ -1,11 +1,27 @@
 "use strict";
 
+Quiz.CLASSES = {
+	FORM_CLASS: 'qu-form',
+	TIMER_CLASS: 'qu-timer',
+	NAV_CLASS: 'qu-nav',
+	MAIN_CLASS: 'qu-main',
+	QUESTION_CLASS: 'qu-question',
+	OPTIONS_CLASS: 'qu-options',
+	BUTTON_CLASSES: {
+		'Previous': 'qu-btn-previous',
+		'Skip': 'qu-btn-skip',
+		'Answer': 'qu-btn-answer',
+		'Next': 'qu-btn-next',
+		'End': 'qu-btn-end'
+	}
+};
+
 /**
  * @class
  * Quiz that has timer. After timeout or test end
  * callback function is called. Changes questions
  * @param {Array}    questions 
- * @param {Number}   time      time for quiz timer
+ * @param {Number}   time      time for quiz timer in minutes
  * @param {Function} callback  called after testing
  * with questions answers as parameter
  */
@@ -13,6 +29,7 @@ function Quiz(questions, time, callback) {
 
 	var quizNavigator = new QuizNavigator(questions);
 	var quizDOMLoader = new QuizDOMLoader();
+	var timer;
 
 	/**
 	 * Loads quiz DOM and bind handlers
@@ -20,6 +37,7 @@ function Quiz(questions, time, callback) {
 	this.loadQuiz = function() {
 		quizDOMLoader.loadQuizDOM(questions.length);
 		bindHandlers();
+		initTimer();
 	};
 
 	/**
@@ -27,6 +45,7 @@ function Quiz(questions, time, callback) {
 	 */
 	this.startQuiz = function() {
 		quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
+		timer.start();
 	};
 
 	function bindHandlers() {
@@ -57,27 +76,71 @@ function Quiz(questions, time, callback) {
 			quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
 		});
 
-		var answerBtn = document.querySelector('.' + Quiz.CLASSES.BUTTON_CLASSES.Answer);
-		answerBtn.addEventListener('click', function() {
+		var endBtn = document.querySelector('.' + Quiz.CLASSES.BUTTON_CLASSES.End);
+		endBtn.addEventListener('click', function() {
+			endQuiz();
+		});
 
+		var answerBtn = document.querySelector('.' + Quiz.CLASSES.BUTTON_CLASSES.Answer);
+		var optionsForm = document.querySelector('.' + Quiz.CLASSES.OPTIONS_CLASS);
+		answerBtn.addEventListener('click', function() {
+			saveAnswers(optionsForm);
+			quizNavigator.nextUnanswered();
+			quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
 		}); 
 	}
-}
 
-Quiz.CLASSES = {
-	FORM_CLASS: 'qu-form',
-	NAV_CLASS: 'qu-nav',
-	MAIN_CLASS: 'qu-main',
-	QUESTION_CLASS: 'qu-question',
-	OPTIONS_CLASS: 'qu-options',
-	BUTTON_CLASSES: {
-		'Previous': 'qu-btn-previous',
-		'Skip': 'qu-btn-skip',
-		'Answer': 'qu-btn-answer',
-		'Next': 'qu-btn-next',
-		'End': 'qu-btn-end'
+	function saveAnswers(form) {
+		var question = quizNavigator.getCurrent();
+		var answers = [];
+		
+		switch(question.type) {
+			case 'single':
+			case 'multiple': {
+				for (var i = 0; i < question.options.length; i++) {
+					var input = form.querySelector('#answer' + i);
+					if (input.checked) {
+						answers.push(question.options[i]);
+					}
+				}
+				break;
+			}
+			case 'field': {
+				var input = form.querySelector('#answer');
+				if (input.value) {
+					answers.push(input.value);
+				}
+				break;
+			}
+		}
+
+		if (answers.length > 0) {
+			question.answers = answers;
+		}
 	}
-};
+
+	function initTimer() {
+		var timerForm = document.querySelector('.' + Quiz.CLASSES.TIMER_CLASS);
+		timer = new QuizTimer(QuizTimer.convertToSeconds(0, time, 0), function(seconds) {
+			showTime(timerForm, seconds);
+		}, function() {
+			endQuiz();
+		});
+	}
+
+	function showTime(timerForm, seconds) {
+		var minutes = QuizTimer.getMinutesFromTime(seconds)
+			.toLocaleString('en-US', { minimumIntegerDigits: 2 });
+		var secs = QuizTimer.getSecondsFromTime(seconds)
+			.toLocaleString('en-US', { minimumIntegerDigits: 2 });
+		timerForm.innerHTML = minutes + ':' + secs;
+	}
+
+	function endQuiz() {
+		timer.stop();
+		callback(questions);
+	}
+}
 
 /**
  * @class
@@ -92,6 +155,7 @@ function QuizDOMLoader() {
 	this.loadQuizDOM = function(questionsCount) {
 		var form = document.querySelector('.' + Quiz.CLASSES.FORM_CLASS);
 		loadNav(form, questionsCount);
+		loadTimer(form);
 		loadMain(form);
 		loadButtons(form);
 	};
@@ -109,17 +173,21 @@ function QuizDOMLoader() {
 		optionsForm.innerHTML = '';
 		switch(question.type) {
 			case 'multiple': {
-				loadOptions(optionsForm, question.options, 'checkbox');
+				loadOptions(optionsForm, question, 'checkbox');
 				break;
 			}
 			case 'single': {
-				loadOptions(optionsForm, question.options, 'radio');
+				loadOptions(optionsForm, question, 'radio');
 				break;
+			}
+			case 'field': {
+				loadField(optionsForm, question);
 			}
 		}
 	};
 
-	function loadOptions(form, options, type) {
+	function loadOptions(form, question, type) {
+		var options = question.options;
 		for (var i = 0; i < options.length; i++) {
 			var input = document.createElement('input');
 			input.type = type;
@@ -131,6 +199,27 @@ function QuizDOMLoader() {
 			form.appendChild(input);
 			form.appendChild(label);
 		}
+
+		if (question.answers) {
+			for (var i = 0; i < options.length; i++) {
+				if (question.answers.indexOf(options[i]) >= 0) {
+					var input = document.querySelector('#answer' + i);
+					input.checked = true;
+				}
+			}
+		}
+	}
+
+	function loadField(form, question) {
+		var input = document.createElement('input');
+		input.type = 'text';
+		input.id = 'answer';
+		input.name = 'answer';
+		form.appendChild(input);
+
+		if (question.answers) {
+			input.value = question.answers[0];
+		}	
 	}
 
 	function loadNav(form, questionsCount) {
@@ -144,6 +233,14 @@ function QuizDOMLoader() {
 			ul.appendChild(li);
 		}
 		form.appendChild(ul);
+	}
+
+	function loadTimer(form) {
+		if (document.querySelector('.' + Quiz.CLASSES.TIMER_CLASS)) return;
+
+		var timerForm = document.createElement('span');
+		timerForm.classList.add(Quiz.CLASSES.TIMER_CLASS);
+		form.appendChild(timerForm);
 	}
 
 	function loadMain(form) {
