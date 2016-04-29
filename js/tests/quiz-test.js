@@ -1,6 +1,9 @@
 "use strict";
 var assert = chai.assert;
 
+var QuizNavigator = Quiz.__testOnly__.navigator;
+var QuizTimer = Quiz.__testOnly__.timer;
+
 describe('QuizNavigator', function() {
 	var questions = [{q:'q1'}, {q:'q2'}, {q:'q3'}, {q:'q4'}];
 	var quizNavigator = new QuizNavigator(questions);
