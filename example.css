@@ -1,0 +1,7 @@
+.active {
+	background: red;
+}
+
+.answered::after {
+	content: "✔";
+}

@@ -6,22 +6,6 @@
  */
 var Quiz = (function() {
 
-	Quiz.CLASSES = {
-		FORM_CLASS: 'qu-form',
-		TIMER_CLASS: 'qu-timer',
-		NAV_CLASS: 'qu-nav',
-		MAIN_CLASS: 'qu-main',
-		QUESTION_CLASS: 'qu-question',
-		OPTIONS_CLASS: 'qu-options',
-		BUTTON_CLASSES: {
-			'Previous': 'qu-btn-previous',
-			'Skip': 'qu-btn-skip',
-			'Answer': 'qu-btn-answer',
-			'Next': 'qu-btn-next',
-			'End': 'qu-btn-end'
-		}
-	};
-
 	/**
 	 * @class
 	 * Quiz that has timer. After timeout or test end
@@ -35,13 +19,14 @@ var Quiz = (function() {
 
 		var quizNavigator = new QuizNavigator(questions);
 		var quizDOMLoader = new QuizDOMLoader();
+		var quizElements;
 		var timer;
 
 		/**
 		 * Loads quiz DOM and bind handlers
 		 */
 		this.loadQuiz = function() {
-			quizDOMLoader.loadQuizDOM(questions.length);
+			quizElements = quizDOMLoader.loadQuizDOM(questions.length);
 			bindHandlers();
 			initTimer();
 		};
@@ -50,50 +35,32 @@ var Quiz = (function() {
 		 * Starts quiz timer and loads first question
 		 */
 		this.startQuiz = function() {
+			quizElements.nav.childNodes[0].classList.add('active');
 			quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
 			timer.start();
 		};
 
-		function bindHandlers() {
-			var nav = document.querySelector('.' + Quiz.CLASSES.NAV_CLASS); 
+		function bindHandlers() { 
 			var onNavClick = function() {
-				quizNavigator.setCursor(this.innerHTML - 1);
-				quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
+				moveDecorator(quizNavigator.setCursor, this.innerHTML - 1);
 			};
-			for (var i = 0; i < nav.childNodes.length; i++) {
-				nav.childNodes[i].addEventListener('click', onNavClick);
+			for (var i = 0; i < quizElements.nav.childNodes.length; i++) {
+				quizElements.nav.childNodes[i].addEventListener('click', onNavClick);
 			}
 
-			var nextBtn = document.querySelector('.' + Quiz.CLASSES.BUTTON_CLASSES.Next);
-			nextBtn.addEventListener('click', function() {
-				quizNavigator.next();
-				quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
-			}); 
+			quizElements.buttons.Next.addEventListener('click', moveNext); 
 
-			var skipBtn = document.querySelector('.' + Quiz.CLASSES.BUTTON_CLASSES.Skip);
-			skipBtn.addEventListener('click', function() {
-				quizNavigator.nextUnanswered();
-				quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
-			}); 
+			quizElements.buttons.Skip.addEventListener('click', moveNextUnanswered); 
 
-			var prevBtn = document.querySelector('.' + Quiz.CLASSES.BUTTON_CLASSES.Previous);
-			prevBtn.addEventListener('click', function() {
-				quizNavigator.prev();
-				quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
-			});
+			quizElements.buttons.Previous.addEventListener('click', movePrev);
 
-			var endBtn = document.querySelector('.' + Quiz.CLASSES.BUTTON_CLASSES.End);
-			endBtn.addEventListener('click', function() {
-				endQuiz();
-			});
+			quizElements.buttons.End.addEventListener('click', endQuiz);
 
-			var answerBtn = document.querySelector('.' + Quiz.CLASSES.BUTTON_CLASSES.Answer);
-			var optionsForm = document.querySelector('.' + Quiz.CLASSES.OPTIONS_CLASS);
 			var askToEnd = true;
-			answerBtn.addEventListener('click', function() {
-				saveAnswers(optionsForm);
+			quizElements.buttons.Answer.addEventListener('click', function() {
+				saveAnswer(quizElements.main.optionsForm);
 				if (askToEnd) {
-					if (!quizNavigator.nextUnanswered()) {
+					if (!moveNextUnanswered()) {
 						askToEnd = false;
 						var message = "You have answered all questions. End test?";
 						var choose = confirm(message);
@@ -101,16 +68,37 @@ var Quiz = (function() {
 							endQuiz();
 							return;
 						} 
-						quizNavigator.next();
+						moveNext();
 					}
 				} else {
-					quizNavigator.next();
+					moveNext();
 				}
-				quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
 			}); 
 		}
 
-		function saveAnswers(form) {
+		function moveDecorator(moveFunction) {
+			quizElements.nav.childNodes[quizNavigator.getCursor()].classList.remove('active');
+
+			var success = moveFunction.call(quizNavigator, arguments[1]); //todo: make more generic
+
+			quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
+			quizElements.nav.childNodes[quizNavigator.getCursor()].classList.add('active'); //todo: move in variable
+			return success;
+		}
+
+		function moveNext() {
+			moveDecorator(quizNavigator.next);
+		}
+
+		function moveNextUnanswered() {
+			return moveDecorator(quizNavigator.nextUnanswered);
+		}
+
+		function movePrev() {
+			moveDecorator(quizNavigator.prev);
+		}
+
+		function saveAnswer(form) {
 			var question = quizNavigator.getCurrent();
 			var answers = [];
 			
@@ -118,7 +106,7 @@ var Quiz = (function() {
 				case 'single':
 				case 'multiple': {
 					for (var i = 0; i < question.options.length; i++) {
-						var input = form.querySelector('#answer' + i);
+						var input = form.querySelector('#answer' + i); //todo: delegate to dom loader
 						if (input.checked) {
 							answers.push(question.options[i]);
 						}
@@ -136,24 +124,25 @@ var Quiz = (function() {
 
 			if (answers.length > 0) {
 				question.answers = answers;
+				quizElements.nav.childNodes[quizNavigator.getCursor()].classList.add('answered');
+			} else {
+				question.answers = null;
+				quizElements.nav.childNodes[quizNavigator.getCursor()].classList.remove('answered');
 			}
 		}
 
 		function initTimer() {
-			var timerForm = document.querySelector('.' + Quiz.CLASSES.TIMER_CLASS);
 			timer = new QuizTimer(QuizTimer.convertToSeconds(0, time, 0), function(seconds) {
-				showTime(timerForm, seconds);
-			}, function() {
-				endQuiz();
-			});
+				showTime(seconds);
+			}, endQuiz);
 		}
 
-		function showTime(timerForm, seconds) {
+		function showTime(seconds) {
 			var minutes = QuizTimer.getMinutesFromTime(seconds)
 				.toLocaleString('en-US', { minimumIntegerDigits: 2 });
 			var secs = QuizTimer.getSecondsFromTime(seconds)
 				.toLocaleString('en-US', { minimumIntegerDigits: 2 });
-			timerForm.innerHTML = minutes + ':' + secs;
+			quizElements.timerForm.innerHTML = minutes + ':' + secs;
 		}
 
 		function endQuiz() {
@@ -168,16 +157,36 @@ var Quiz = (function() {
 	 */
 	function QuizDOMLoader() {
 
+		var CLASSES = {
+			FORM_CLASS: 'qu-form',
+			TIMER_CLASS: 'qu-timer',
+			NAV_CLASS: 'qu-nav',
+			MAIN_CLASS: 'qu-main',
+			QUESTION_CLASS: 'qu-question',
+			OPTIONS_CLASS: 'qu-options',
+			BUTTON_CLASSES: {
+				'Previous': 'qu-btn-previous',
+				'Skip': 'qu-btn-skip',
+				'Answer': 'qu-btn-answer',
+				'Next': 'qu-btn-next',
+				'End': 'qu-btn-end'
+			}
+		};
+
 		/**
 		 * Loads DOM objects for quiz except questions
 		 * @param  {Number} questionsCount for navigation bar
 		 */
 		this.loadQuizDOM = function(questionsCount) {
-			var form = document.querySelector('.' + Quiz.CLASSES.FORM_CLASS);
-			loadNav(form, questionsCount);
-			loadTimer(form);
-			loadMain(form);
-			loadButtons(form);
+			var quizElements = {};
+			var form = document.querySelector('.' + CLASSES.FORM_CLASS);
+
+			quizElements.nav = loadNav(form, questionsCount);
+			quizElements.timerForm = loadTimer(form);
+			quizElements.main = loadMain(form);
+			quizElements.buttons = loadButtons(form);
+
+			return quizElements;
 		};
 
 		/**
@@ -185,11 +194,11 @@ var Quiz = (function() {
 		 * @param  {Question} question 
 		 */
 		this.loadQuestion = function(question) {
-			var p = document.querySelector('.' + Quiz.CLASSES.QUESTION_CLASS);
+			var p = document.querySelector('.' + CLASSES.QUESTION_CLASS); //todo: without selector
 			p.innerHTML = '';
 			p.appendChild(document.createTextNode(question.text));
 
-			var optionsForm = document.querySelector('.' + Quiz.CLASSES.OPTIONS_CLASS);
+			var optionsForm = document.querySelector('.' + CLASSES.OPTIONS_CLASS);
 			optionsForm.innerHTML = '';
 			switch(question.type) {
 				case 'multiple': {
@@ -223,7 +232,7 @@ var Quiz = (function() {
 			if (question.answers) {
 				for (var i = 0; i < options.length; i++) {
 					if (question.answers.indexOf(options[i]) >= 0) {
-						var input = document.querySelector('#answer' + i);
+						var input = document.querySelector('#answer' + i); //todo: in variable
 						input.checked = true;
 					}
 				}
@@ -243,49 +252,74 @@ var Quiz = (function() {
 		}
 
 		function loadNav(form, questionsCount) {
-			if (document.querySelector('.' + Quiz.CLASSES.NAV_CLASS)) return;
+			var ul = document.querySelector('.' + CLASSES.NAV_CLASS);
+			if (ul) return ul;
 
-			var ul = document.createElement('ul');
-			ul.classList.add(Quiz.CLASSES.NAV_CLASS);
+			ul = document.createElement('ul');
+			ul.classList.add(CLASSES.NAV_CLASS);
 			for (var i = 0; i < questionsCount; i++) {
 				var li = document.createElement('li');
 				li.appendChild(document.createTextNode(i + 1));
 				ul.appendChild(li);
 			}
 			form.appendChild(ul);
+
+			return ul;
 		}
 
 		function loadTimer(form) {
-			if (document.querySelector('.' + Quiz.CLASSES.TIMER_CLASS)) return;
+			var timerForm = document.querySelector('.' + CLASSES.TIMER_CLASS);
+			if (timerForm) return timerForm;
 
-			var timerForm = document.createElement('span');
-			timerForm.classList.add(Quiz.CLASSES.TIMER_CLASS);
+			timerForm = document.createElement('span');
+			timerForm.classList.add(CLASSES.TIMER_CLASS);
 			form.appendChild(timerForm);
+
+			return timerForm;
 		}
 
 		function loadMain(form) {
-			if (document.querySelector('.' + Quiz.CLASSES.MAIN_CLASS)) return;
+			var mainForm = {};
+			var main = document.querySelector('.' + CLASSES.MAIN_CLASS);
+			if (main) {
+				mainForm.question = document.querySelector('.' + CLASSES.QUESTION_CLASS);
+				mainForm.optionsForm = document.querySelector('.' + CLASSES.OPTIONS_CLASS);
+				return mainForm;
+			}
 
-			var main = document.createElement('div');
-			main.classList.add(Quiz.CLASSES.MAIN_CLASS);
+			main = document.createElement('div');
+			main.classList.add(CLASSES.MAIN_CLASS);
 			var question = document.createElement('p');
-			question.classList.add(Quiz.CLASSES.QUESTION_CLASS);
+			question.classList.add(CLASSES.QUESTION_CLASS);
 			main.appendChild(question);
 			var optionsForm = document.createElement('div');
-			optionsForm.classList.add(Quiz.CLASSES.OPTIONS_CLASS);
+			optionsForm.classList.add(CLASSES.OPTIONS_CLASS);
 			main.appendChild(optionsForm);
 			form.appendChild(main);
+
+			mainForm.question = question;
+			mainForm.optionsForm = optionsForm;
+			return mainForm;
 		}
 
 		function loadButtons(form) {
-			if (document.querySelector('[class^=qu-btn-]')) return;
+			var buttons = {};
+			if (document.querySelector('[class^=qu-btn-]')) {
+				for (var key in Quiz.CLASSES.BUTTON_CLASSES) {
+					buttons[key] = document.querySelector('.' + CLASSES.BUTTON_CLASSES[key]);
+				}
+				return buttons;
+			}
 
-			for (var key in Quiz.CLASSES.BUTTON_CLASSES) {
+			for (var key in CLASSES.BUTTON_CLASSES) {
 				var button = document.createElement('div');
 				button.appendChild(document.createTextNode(key));
-				button.classList.add(Quiz.CLASSES.BUTTON_CLASSES[key]);
+				button.classList.add(CLASSES.BUTTON_CLASSES[key]);
 				form.appendChild(button);
+				buttons[key] = button;
 			}
+
+			return buttons;
 		}
 	}
 
