@@ -2,7 +2,7 @@
 var assert = chai.assert;
 
 var QuizNavigator = Quiz.__testOnly__.navigator;
-var QuizTimer = Quiz.__testOnly__.timer;
+var Timer = Quiz.__testOnly__.timer;
 
 describe('QuizNavigator', function() {
 	var questions = [{q:'q1'}, {q:'q2'}, {q:'q3'}, {q:'q4'}];
@@ -84,43 +84,43 @@ describe('QuizNavigator', function() {
 	});
 });
 
-describe('QuizTimer', function() {
+describe('Timer', function() {
 
 	describe('convertToSeconds', function() {
 		it('should convert 2h 5m 3s correctly', function() {
-			assert.equal(QuizTimer.convertToSeconds(2, 5, 3), 7503);
+			assert.equal(Timer.convertToSeconds(2, 5, 3), 7503);
 		});
 	});
 
 	describe('getSecondsFromTime', function() {
 		it('should get seconds correctly', function() {
-			assert.equal(QuizTimer.getSecondsFromTime(130), 10);
+			assert.equal(Timer.getSecondsFromTime(130), 10);
 		});
 		it('should get 0 if no seconds in time', function() {
-			assert.equal(QuizTimer.getSecondsFromTime(120), 0);
+			assert.equal(Timer.getSecondsFromTime(120), 0);
 		});
 	});
 
 	describe('getMinutesFromTime', function() {
 		it('should get minutes correctly', function() {
-			assert.equal(QuizTimer.getMinutesFromTime(130), 2);
+			assert.equal(Timer.getMinutesFromTime(130), 2);
 		});
 		it('should get 0 if no minutes in time', function() {
-			assert.equal(QuizTimer.getMinutesFromTime(3600), 0);
+			assert.equal(Timer.getMinutesFromTime(3600), 0);
 		});
 	});
 
 	describe('getHoursFromTime', function() {
 		it('should get hours correctly', function() {
-			assert.equal(QuizTimer.getHoursFromTime(3700), 1);
+			assert.equal(Timer.getHoursFromTime(3700), 1);
 		});
 		it('should get 0 if no hours in time', function() {
-			assert.equal(QuizTimer.getHoursFromTime(3500), 0);
+			assert.equal(Timer.getHoursFromTime(3500), 0);
 		});
 	});
 
-	describe('QuizTimer', function() {
-		var timer = new QuizTimer();
+	describe('Timer', function() {
+		var timer = new Timer();
 
 		describe('start', function() {
 			it('should start timeout of 1s correctly', function(done) {

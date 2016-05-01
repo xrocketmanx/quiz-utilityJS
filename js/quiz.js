@@ -18,7 +18,7 @@ var Quiz = (function() {
 	function Quiz(questions, time, callback) {
 
 		var quizNavigator = new QuizNavigator(questions);
-		var quizDOMLoader = new QuizDOMLoader();
+		var docManipulator = new DocumentManipulator();
 		var quizElements;
 		var timer;
 
@@ -26,7 +26,7 @@ var Quiz = (function() {
 		 * Loads quiz DOM and bind handlers
 		 */
 		this.loadQuiz = function() {
-			quizElements = quizDOMLoader.loadQuizDOM(questions.length);
+			quizElements = docManipulator.loadQuizDOM(questions.length);
 			bindHandlers();
 			initTimer();
 		};
@@ -35,8 +35,8 @@ var Quiz = (function() {
 		 * Starts quiz timer and loads first question
 		 */
 		this.startQuiz = function() {
-			quizElements.nav.childNodes[0].classList.add('active');
-			quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
+			docManipulator.setActiveQuestion(0, 'add');
+			docManipulator.loadQuestion(quizNavigator.getCurrent());
 			timer.start();
 		};
 
@@ -58,7 +58,7 @@ var Quiz = (function() {
 
 			var askToEnd = true;
 			quizElements.buttons.Answer.addEventListener('click', function() {
-				saveAnswer(quizElements.main.optionsForm);
+				saveAnswer();
 				if (askToEnd) {
 					if (!moveNextUnanswered()) {
 						askToEnd = false;
@@ -77,12 +77,16 @@ var Quiz = (function() {
 		}
 
 		function moveDecorator(moveFunction) {
-			quizElements.nav.childNodes[quizNavigator.getCursor()].classList.remove('active');
+			docManipulator.setActiveQuestion(quizNavigator.getCursor(), 'remove');
 
-			var success = moveFunction.call(quizNavigator, arguments[1]); //todo: make more generic
+			var args = [];
+			for (var i = 1; i < arguments.length; i++) {
+				args.push(arguments[i]);
+			}
+			var success = moveFunction.call(quizNavigator, args);
 
-			quizDOMLoader.loadQuestion(quizNavigator.getCurrent());
-			quizElements.nav.childNodes[quizNavigator.getCursor()].classList.add('active'); //todo: move in variable
+			docManipulator.loadQuestion(quizNavigator.getCurrent());
+			docManipulator.setActiveQuestion(quizNavigator.getCursor(), 'add');
 			return success;
 		}
 
@@ -98,7 +102,7 @@ var Quiz = (function() {
 			moveDecorator(quizNavigator.prev);
 		}
 
-		function saveAnswer(form) {
+		function saveAnswer() {
 			var question = quizNavigator.getCurrent();
 			var answers = [];
 			
@@ -106,7 +110,7 @@ var Quiz = (function() {
 				case 'single':
 				case 'multiple': {
 					for (var i = 0; i < question.options.length; i++) {
-						var input = form.querySelector('#answer' + i); //todo: delegate to dom loader
+						var input = docManipulator.selectInput(i);
 						if (input.checked) {
 							answers.push(question.options[i]);
 						}
@@ -114,7 +118,7 @@ var Quiz = (function() {
 					break;
 				}
 				case 'field': {
-					var input = form.querySelector('#answer');
+					var input = docManipulator.selectInput();
 					if (input.value) {
 						answers.push(input.value);
 					}
@@ -124,23 +128,23 @@ var Quiz = (function() {
 
 			if (answers.length > 0) {
 				question.answers = answers;
-				quizElements.nav.childNodes[quizNavigator.getCursor()].classList.add('answered');
+				docManipulator.setAnsweredQuestion(quizNavigator.getCursor(), 'add');
 			} else {
 				question.answers = null;
-				quizElements.nav.childNodes[quizNavigator.getCursor()].classList.remove('answered');
+				docManipulator.setAnsweredQuestion(quizNavigator.getCursor(), 'remove');
 			}
 		}
 
 		function initTimer() {
-			timer = new QuizTimer(QuizTimer.convertToSeconds(0, time, 0), function(seconds) {
+			timer = new Timer(Timer.convertToSeconds(0, time, 0), function(seconds) {
 				showTime(seconds);
 			}, endQuiz);
 		}
 
 		function showTime(seconds) {
-			var minutes = QuizTimer.getMinutesFromTime(seconds)
+			var minutes = Timer.getMinutesFromTime(seconds)
 				.toLocaleString('en-US', { minimumIntegerDigits: 2 });
-			var secs = QuizTimer.getSecondsFromTime(seconds)
+			var secs = Timer.getSecondsFromTime(seconds)
 				.toLocaleString('en-US', { minimumIntegerDigits: 2 });
 			quizElements.timerForm.innerHTML = minutes + ':' + secs;
 		}
@@ -154,8 +158,9 @@ var Quiz = (function() {
 	/**
 	 * @class
 	 * Loads DOM objects for quiz if they are ommited
+	 * and manipulates DOM
 	 */
-	function QuizDOMLoader() {
+	function DocumentManipulator() {
 
 		var CLASSES = {
 			FORM_CLASS: 'qu-form',
@@ -172,13 +177,16 @@ var Quiz = (function() {
 				'End': 'qu-btn-end'
 			}
 		};
+		var INPUT_ID = "answer";
+
+		var quizElements;
 
 		/**
 		 * Loads DOM objects for quiz except questions
 		 * @param  {Number} questionsCount for navigation bar
 		 */
 		this.loadQuizDOM = function(questionsCount) {
-			var quizElements = {};
+			quizElements = {};
 			var form = document.querySelector('.' + CLASSES.FORM_CLASS);
 
 			quizElements.nav = loadNav(form, questionsCount);
@@ -194,11 +202,11 @@ var Quiz = (function() {
 		 * @param  {Question} question 
 		 */
 		this.loadQuestion = function(question) {
-			var p = document.querySelector('.' + CLASSES.QUESTION_CLASS); //todo: without selector
-			p.innerHTML = '';
-			p.appendChild(document.createTextNode(question.text));
+			var questionForm = quizElements.main.question;
+			questionForm.innerHTML = '';
+			questionForm.appendChild(document.createTextNode(question.text));
 
-			var optionsForm = document.querySelector('.' + CLASSES.OPTIONS_CLASS);
+			var optionsForm = quizElements.main.optionsForm;
 			optionsForm.innerHTML = '';
 			switch(question.type) {
 				case 'multiple': {
@@ -215,15 +223,45 @@ var Quiz = (function() {
 			}
 		};
 
+		/**
+		 * Selects inputs on test form by index
+		 * if its specified
+		 * @param  {Number} index index of input
+		 * @return {NodeElement}       input
+		 */
+		this.selectInput = function(index) {
+			var form = quizElements.main.optionsForm;
+			return index !== undefined ? 
+				form.querySelector('#' + INPUT_ID + index) : form.querySelector('#' + INPUT_ID);
+		}
+
+		/**
+		 * Sets nav of question active class
+		 * @param {Number} questionIndex 
+		 * @param {String} method 'add' or 'remove'        
+		 */
+		this.setActiveQuestion = function(questionIndex, method) {
+			quizElements.nav.childNodes[questionIndex].classList[method]('active');
+		}
+
+		/**
+		 * Sets nav of question answered class
+		 * @param {Number} questionIndex 
+		 * @param {String} method 'add' or 'remove'        
+		 */
+		this.setAnsweredQuestion = function(questionIndex, method) {
+			quizElements.nav.childNodes[questionIndex].classList[method]('answered');
+		}
+
 		function loadOptions(form, question, type) {
 			var options = question.options;
 			for (var i = 0; i < options.length; i++) {
 				var input = document.createElement('input');
 				input.type = type;
-				input.name = 'answer';
-				input.id = 'answer' + i;
+				input.name = INPUT_ID;
+				input.id = INPUT_ID + i;
 				var label = document.createElement('label');
-				label.htmlFor = 'answer' + i;
+				label.htmlFor = INPUT_ID + i;
 				label.appendChild(document.createTextNode(options[i]));
 				form.appendChild(input);
 				form.appendChild(label);
@@ -232,7 +270,7 @@ var Quiz = (function() {
 			if (question.answers) {
 				for (var i = 0; i < options.length; i++) {
 					if (question.answers.indexOf(options[i]) >= 0) {
-						var input = document.querySelector('#answer' + i); //todo: in variable
+						var input = document.querySelector('#' + INPUT_ID + i); 
 						input.checked = true;
 					}
 				}
@@ -242,8 +280,8 @@ var Quiz = (function() {
 		function loadField(form, question) {
 			var input = document.createElement('input');
 			input.type = 'text';
-			input.id = 'answer';
-			input.name = 'answer';
+			input.id = INPUT_ID;
+			input.name = INPUT_ID;
 			form.appendChild(input);
 
 			if (question.answers) {
@@ -403,7 +441,7 @@ var Quiz = (function() {
 	 * @param {Function} action   actions every second
 	 * @param {Function} callback actions in the end
 	 */
-	function QuizTimer(seconds, action, callback) {
+	function Timer(seconds, action, callback) {
 		var interval;
 		var initialSeconds = seconds;
 
@@ -445,7 +483,7 @@ var Quiz = (function() {
 		};
 
 		/**
-		 * Returns seconds of current QuizTimer
+		 * Returns seconds of current Timer
 		 * state
 		 * @return {Number} seconds
 		 */
@@ -481,7 +519,7 @@ var Quiz = (function() {
 	 * @param  {Number} seconds 
 	 * @return {Number}         time in seconds
 	 */
-	QuizTimer.convertToSeconds = function(hours, minutes, seconds) {
+	Timer.convertToSeconds = function(hours, minutes, seconds) {
 		return hours * 3600 + minutes * 60 + seconds;
 	};
 
@@ -490,7 +528,7 @@ var Quiz = (function() {
 	 * @param  {Number} seconds time in seconds
 	 * @return {Number}         seconds
 	 */
-	QuizTimer.getSecondsFromTime = function(seconds) {
+	Timer.getSecondsFromTime = function(seconds) {
 		return seconds % 60;
 	};
 
@@ -499,7 +537,7 @@ var Quiz = (function() {
 	 * @param  {Number} minutes time in seconds
 	 * @return {Number}         minutes
 	 */
-	QuizTimer.getMinutesFromTime = function(seconds) {
+	Timer.getMinutesFromTime = function(seconds) {
 		return Math.floor(seconds / 60) % 60;
 	};
 
@@ -508,7 +546,7 @@ var Quiz = (function() {
 	 * @param  {Number} hours time in seconds
 	 * @return {Number}       hours
 	 */
-	QuizTimer.getHoursFromTime = function(seconds) {
+	Timer.getHoursFromTime = function(seconds) {
 		return Math.floor(seconds / 3600);
 	};
 
@@ -517,7 +555,7 @@ var Quiz = (function() {
 	 */
 	Quiz.__testOnly__ = {
 		navigator: QuizNavigator,
-		timer: QuizTimer
+		timer: Timer
 	};
 
 	return Quiz;
