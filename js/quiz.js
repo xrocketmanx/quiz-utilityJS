@@ -166,7 +166,6 @@ var Quiz = (function() {
 			FORM_CLASS: 'qu-form',
 			TIMER_CLASS: 'qu-timer',
 			NAV_CLASS: 'qu-nav',
-			MAIN_CLASS: 'qu-main',
 			QUESTION_CLASS: 'qu-question',
 			OPTIONS_CLASS: 'qu-options',
 			BUTTON_CLASSES: {
@@ -291,16 +290,18 @@ var Quiz = (function() {
 
 		function loadNav(form, questionsCount) {
 			var ul = document.querySelector('.' + CLASSES.NAV_CLASS);
-			if (ul) return ul;
 
-			ul = document.createElement('ul');
-			ul.classList.add(CLASSES.NAV_CLASS);
+			if (!ul) {
+				ul = document.createElement('ul');
+				ul.classList.add(CLASSES.NAV_CLASS);
+				form.appendChild(ul);
+			}
+
 			for (var i = 0; i < questionsCount; i++) {
 				var li = document.createElement('li');
 				li.appendChild(document.createTextNode(i + 1));
 				ul.appendChild(li);
 			}
-			form.appendChild(ul);
 
 			return ul;
 		}
@@ -317,43 +318,38 @@ var Quiz = (function() {
 		}
 
 		function loadMain(form) {
-			var mainForm = {};
-			var main = document.querySelector('.' + CLASSES.MAIN_CLASS);
-			if (main) {
-				mainForm.question = document.querySelector('.' + CLASSES.QUESTION_CLASS);
-				mainForm.optionsForm = document.querySelector('.' + CLASSES.OPTIONS_CLASS);
-				return mainForm;
+			var main = {};
+
+			var question = document.querySelector('.' + CLASSES.QUESTION_CLASS);
+			if (!question) {
+				question = document.createElement('p');
+				question.classList.add(CLASSES.QUESTION_CLASS);
+				form.appendChild(question);
 			}
 
-			main = document.createElement('div');
-			main.classList.add(CLASSES.MAIN_CLASS);
-			var question = document.createElement('p');
-			question.classList.add(CLASSES.QUESTION_CLASS);
-			main.appendChild(question);
-			var optionsForm = document.createElement('div');
-			optionsForm.classList.add(CLASSES.OPTIONS_CLASS);
-			main.appendChild(optionsForm);
-			form.appendChild(main);
+			var optionsForm = document.querySelector('.' + CLASSES.OPTIONS_CLASS);
+			if (!optionsForm) {
+				optionsForm = document.createElement('div');
+				optionsForm.classList.add(CLASSES.OPTIONS_CLASS);
+				form.appendChild(optionsForm);
+			}
 
-			mainForm.question = question;
-			mainForm.optionsForm = optionsForm;
-			return mainForm;
+			main.question = question;
+			main.optionsForm = optionsForm;
+			return main;
 		}
 
 		function loadButtons(form) {
 			var buttons = {};
-			if (document.querySelector('[class^=qu-btn-]')) {
-				for (var key in Quiz.CLASSES.BUTTON_CLASSES) {
-					buttons[key] = document.querySelector('.' + CLASSES.BUTTON_CLASSES[key]);
-				}
-				return buttons;
-			}
 
 			for (var key in CLASSES.BUTTON_CLASSES) {
-				var button = document.createElement('div');
-				button.appendChild(document.createTextNode(key));
-				button.classList.add(CLASSES.BUTTON_CLASSES[key]);
-				form.appendChild(button);
+				var button = document.querySelector('.' + CLASSES.BUTTON_CLASSES[key]);
+				if (!button) {
+					button = document.createElement('div');
+					button.appendChild(document.createTextNode(key));
+					button.classList.add(CLASSES.BUTTON_CLASSES[key]);
+					form.appendChild(button);
+				}
 				buttons[key] = button;
 			}
 

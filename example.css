@@ -1,7 +1,45 @@
-.active {
-	background: red;
+* {
+	box-sizing: border-box;
 }
 
-.answered::after {
+.qu-nav {
+	padding: 0;
+	margin: 0;
+	display: inline-block;
+}
+
+.qu-nav li {
+	display: inline-block;
+	padding: 0.8em 1em;
+	color: #000;
+	background-color: #DEDDDD;
+}
+
+.qu-nav li:hover, .qu-nav li.active {
+	background-color: #757575;
+	color: #FFF;
+}
+
+.qu-nav li.answered::after {
 	content: "✔";
+	position: absolute;
+	color: #00D400;
+}
+
+.qu-timer {
+	position: relative;
+	padding: 0.8em 1em;
+	background-color: #DEDDDD;
+	color: #00D400;
+	float: right;
+	border-radius: 10%;
+}
+
+[class*="qu-btn"] {
+	margin: 5px;
+	display: inline-block;
+	padding: 1em;
+	color: #DEDDDD;
+	background-color: #00D400;
+	border-radius: 100%;
 }
