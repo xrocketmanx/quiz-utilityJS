@@ -1,6 +1,24 @@
+/*todo: refactor*/
+
 * {
 	box-sizing: border-box;
+	font-family: arial;
 }
+
+.qu-form {
+	width: 31.25em;
+	height: 31.25em;
+	margin: auto;
+	border: 2px solid #757575;
+	position: relative;
+}
+
+.qu-form > footer {
+	position: absolute;
+	width: 100%;
+	bottom: 0px;
+	-webkit-user-select: none; 
+} 
 
 .qu-nav {
 	padding: 0;
@@ -18,6 +36,7 @@
 .qu-nav li:hover, .qu-nav li.active {
 	background-color: #757575;
 	color: #FFF;
+	cursor: pointer;
 }
 
 .qu-nav li.answered::after {
@@ -32,14 +51,46 @@
 	background-color: #DEDDDD;
 	color: #00D400;
 	float: right;
-	border-radius: 10%;
+	-webkit-user-select: none;
 }
 
 [class*="qu-btn"] {
-	margin: 5px;
+	margin: 0.3em 0.5em;
 	display: inline-block;
 	padding: 1em;
-	color: #DEDDDD;
-	background-color: #00D400;
+	color: #00D400;
+	border: 1px solid #DEDDDD;
 	border-radius: 100%;
+	transition: all 0.3s;
+}
+
+[class*="qu-btn"]:hover {
+	background-color: #DEDDDD;
+	cursor: pointer;
+}
+
+[class*="qu-btn"]:active {
+	transform: translateY(5px);
+}
+
+[class*="qu-btn"]:last-child, [class*="qu-btn"]:nth-last-child(2) {
+	float: right;
+}
+
+.qu-question {
+	background-color: #757575;
+	padding: 1em 1em;
+	color: #FFF;
+	margin: 0px;
+}
+
+.qu-options {
+	margin: 2em 0;
+	padding: 0 1em;
+}
+
+.qu-options label::after {
+	content: "";
+	height: 2em;
+	display: block;
 }

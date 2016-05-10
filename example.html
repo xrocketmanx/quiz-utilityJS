@@ -3,29 +3,40 @@
 <head>
 	<title>Quiz example</title>
 	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" type="text/css" href="example.css">
 	<script src="js/quiz.js"></script>
 </head>
 <body>
 	<div class="qu-form">
+		<ul class="qu-nav"></ul>
+		<span class="qu-timer"></span>
+		<p class="qu-question"></p>
+		<div class="qu-options"></div>
+		<footer>
+			<div class="qu-btn-previous">Previous</div>
+			<div class="qu-btn-next">Next</div>
+			<div class="qu-btn-skip">Skip</div>
+			<div class="qu-btn-end">End</div>
+			<div class="qu-btn-answer">Answer</div>
+		</footer>
 	</div>
 	<script type="text/javascript">
 		var question1 = {
-			text: 'what is your favourite color?',
+			text: 'What are your favourite colors?',
 			options: ['green', 'blue', 'yellow'],
 			type: 'multiple'
 		};
 		var question2 = {
-			text: 'what is your favourite band?',
+			text: 'What is your favourite band?',
 			options: ['Rammstein', 'Linkin Park', 'Deep purple', 'Something else'],
 			type: 'single'
 		};
 		var question3 = {
-			text: 'enter your favourite dota hero',
+			text: 'Enter your favourite dota hero name:',
 			type: 'field'
 		}
 		var quiz = new Quiz([question1, question2, question3], 5, function(questions) {
-			console.log(questions);
 			document.querySelector('.qu-form').innerHTML = '';
 		});
 		quiz.loadQuiz();

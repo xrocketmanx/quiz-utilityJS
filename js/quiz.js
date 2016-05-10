@@ -170,10 +170,10 @@ var Quiz = (function() {
 			OPTIONS_CLASS: 'qu-options',
 			BUTTON_CLASSES: {
 				'Previous': 'qu-btn-previous',
-				'Skip': 'qu-btn-skip',
-				'Answer': 'qu-btn-answer',
 				'Next': 'qu-btn-next',
-				'End': 'qu-btn-end'
+				'Skip': 'qu-btn-skip',
+				'End': 'qu-btn-end',
+				'Answer': 'qu-btn-answer'
 			}
 		};
 		var INPUT_ID = "answer";
